@@ -1,0 +1,68 @@
+# TurtleBot3 Configuration Parameters
+# Standard physical and kinematic specifications from ROBOTIS TurtleBot3 Manual
+
+robot:
+  model: "burger"  # burger or waffle
+  
+  # Physical dimensions (TurtleBot3 Burger)
+  burger:
+    chassis_radius: 0.105       # meters (105 mm)
+    wheel_radius: 0.033         # meters (33 mm)
+    wheel_separation: 0.160     # meters (160 mm between left and right wheels)
+    weight: 1.0                 # kg
+    max_linear_velocity: 0.22   # m/s (~0.8 km/h)
+    max_angular_velocity: 2.84  # rad/s (~162.7 deg/s)
+    min_linear_velocity: -0.22  # m/s (reverse)
+    linear_acceleration_limit: 0.5   # m/s^2
+    angular_acceleration_limit: 2.0  # rad/s^2
+    safety_inflation_radius: 0.20    # meters (collision buffer around robot)
+
+  # Physical dimensions (TurtleBot3 Waffle Pi)
+  waffle:
+    chassis_length: 0.281       # meters
+    chassis_width: 0.306        # meters
+    wheel_radius: 0.033         # meters
+    wheel_separation: 0.287     # meters
+    weight: 1.8                 # kg
+    max_linear_velocity: 0.26   # m/s
+    max_angular_velocity: 1.82  # rad/s
+    min_linear_velocity: -0.26  # m/s
+    linear_acceleration_limit: 0.5
+    angular_acceleration_limit: 2.0
+    safety_inflation_radius: 0.25
+
+# 360-Degree 2D LiDAR (LDS-01 / LDS-02) Specifications
+lidar:
+  min_range: 0.12               # meters (12 cm minimum blind zone)
+  max_range: 3.50               # meters (3.5 m maximum detection)
+  samples: 360                  # 360 range beams (1 degree angular resolution)
+  angle_min: 0.0                # radians
+  angle_max: 6.28318530718      # 2*pi radians
+  angle_increment: 0.0174532925 # 2*pi / 360 radians (1 degree)
+  noise_stddev: 0.01            # 1 cm standard deviation Gaussian measurement noise
+  scan_rate_hz: 10              # 10 Hz update frequency
+
+# Odometry & Localization Parameters
+localization:
+  update_rate_hz: 30            # 30 Hz odometry integration
+  wheel_slip_factor: 0.02       # 2% simulated slip on turns
+  publish_tf: true
+  odom_frame: "odom"
+  base_frame: "base_link"
+
+# Autonomous Navigation & Path Tracking Parameters
+navigation:
+  goal_tolerance_distance: 0.08 # meters (8 cm arrival threshold)
+  goal_tolerance_angle: 0.15    # radians (~8.6 degrees heading alignment)
+  path_lookahead_distance: 0.35 # meters (Pure pursuit / waypoint tracking lookahead)
+  kp_linear: 0.8                # Proportional gain for linear velocity control
+  kp_angular: 2.2               # Proportional gain for steering angle error
+  ki_angular: 0.01              # Integral gain for steady-state heading error
+  kd_angular: 0.15              # Derivative gain for steering damping
+
+# Reactive Obstacle Avoidance Parameters
+obstacle_avoidance:
+  emergency_stop_distance: 0.18 # meters (hard stop if obstacle within 18 cm)
+  warning_distance: 0.50        # meters (commence repelling / deceleration)
+  sector_angle_front_deg: 60    # +/- 30 degrees considered front collision cone
+  repulsion_gain: 1.2           # Gain for repulsive potential force

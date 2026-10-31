@@ -1,0 +1,10 @@
+# Pixi environment directory (binaries)
+.pixi/
+
+# Python byte code
+__pycache__/
+*.pyc
+
+# OS generated files
+Thumbs.db
+Desktop.ini
