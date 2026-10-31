@@ -51,7 +51,7 @@ except ImportError:
 class TurtleBot3SimulationNode:
     """ROS 2 wrapper and simulation execution coordinator."""
 
-    def __init__(self, headless: bool = False, config_path: str = None):
+    def __init__(self, headless: bool = False, config_path: str = None, initial_goal: Optional[Tuple[float, float, float]] = None):
         self.headless = headless
 
         # 1. Initialize Simulation World
@@ -110,8 +110,9 @@ class TurtleBot3SimulationNode:
         self.sub_goal_pose = None
         self.init_ros2()
 
-        # Set default goal from world configuration
-        self.set_goal(self.world.goal_pose)
+        # Set default goal from CLI argument or world configuration
+        target_goal = initial_goal if initial_goal is not None else self.world.goal_pose
+        self.set_goal(target_goal)
 
     def init_ros2(self):
         """Initializes ROS 2 Humble node and standard publishers/subscribers."""
@@ -347,9 +348,12 @@ def main():
     parser.add_argument("--headless", action="store_true", help="Run without graphical display")
     parser.add_argument("--duration", type=float, default=None, help="Maximum execution time in seconds")
     parser.add_argument("--config", type=str, default=None, help="Custom world configuration YAML")
+    parser.add_argument("--goal", nargs=2, type=float, metavar=("X", "Y"), help="Custom destination coordinates X and Y in meters")
+    parser.add_argument("--yaw", type=float, default=0.0, help="Custom target arrival heading in degrees (default: 0.0)")
     args = parser.parse_args()
 
-    sim = TurtleBot3SimulationNode(headless=args.headless, config_path=args.config)
+    custom_goal = (args.goal[0], args.goal[1], math.radians(args.yaw)) if args.goal else None
+    sim = TurtleBot3SimulationNode(headless=args.headless, config_path=args.config, initial_goal=custom_goal)
     sim.run(max_seconds=args.duration)
 
 
