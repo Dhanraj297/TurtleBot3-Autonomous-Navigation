@@ -250,10 +250,10 @@ class SimulationVisualizer:
             ("Heading (Theta):", f"{telemetry.get('theta_deg', 0.0):.1f} deg"),
             ("Linear Vel (v):", f"{telemetry.get('v', 0.0):.2f} m/s"),
             ("Angular Vel (w):", f"{telemetry.get('omega', 0.0):.2f} rad/s"),
-            ("Goal (x, y):", f"{telemetry.get('goal_x', 0.0):.2f} m, {telemetry.get('goal_y', 0.0):.2f} m"),
-            ("Distance to Goal:", f"{telemetry.get('dist_to_goal', 0.0):.2f} m"),
+            ("Goal (x, y):", f"{telemetry.get('goal_x', 0.0):.2f} m, {telemetry.get('goal_y', 0.0):.2f} m" if telemetry.get("has_goal") else "None (Click arena)"),
+            ("Distance to Goal:", f"{telemetry.get('dist_to_goal', 0.0):.2f} m" if telemetry.get("has_goal") else "--"),
             ("Min LiDAR Clearance:", f"{telemetry.get('min_lidar_dist', 0.0):.2f} m"),
-            ("Path Waypoints:", f"{telemetry.get('waypoints_left', 0)} / {telemetry.get('total_waypoints', 0)}"),
+            ("Path Waypoints:", f"{telemetry.get('waypoints_left', 0)} / {telemetry.get('total_waypoints', 0)}" if telemetry.get("has_goal") else "--"),
             ("Traveled Distance:", f"{telemetry.get('dist_traveled', 0.0):.2f} m")
         ]
 
@@ -275,13 +275,13 @@ class SimulationVisualizer:
         y += 28
 
         controls = [
-            ("Left Click", "Set 2D Nav Goal"),
-            ("Right Click", "Place Obstacle"),
-            ("Space / A", "Start Autonomous Nav"),
+            ("Left Click", "Set Goal & Start Path"),
+            ("Right Click", "Place Dynamic Obstacle"),
+            ("O", "Load Lab Obstacles"),
+            ("C", "Clear All Obstacles"),
+            ("R", "Reset Robot (Idle)"),
             ("T", "Toggle Teleoperation"),
             ("W/A/S/D", "Drive in Teleop"),
-            ("R", "Reset Robot Pose"),
-            ("C", "Clear Dynamic Obstacles"),
             ("S", "Capture Screenshot")
         ]
 

@@ -41,15 +41,22 @@ class IndoorWorld:
             self.create_default_world()
 
     def create_default_world(self):
-        """Creates standard academic laboratory indoor layout."""
-        # Outer boundaries [x1, y1, x2, y2]
+        """Creates clean arena layout with boundary walls and no initial obstacles."""
         self.boundary_walls = [
             [0.0, 0.0, 10.0, 0.0],
             [10.0, 0.0, 10.0, 8.0],
             [10.0, 8.0, 0.0, 8.0],
             [0.0, 8.0, 0.0, 0.0]
         ]
-        # Interior dividers with doorways
+        self.interior_walls = []
+        self.all_walls = list(self.boundary_walls)
+        self.obstacles = []
+        self.dynamic_obstacles = []
+        self.start_pose = (1.2, 1.5, 0.0)
+        self.goal_pose = (8.5, 4.8, math.radians(90.0))
+
+    def load_preset_lab_obstacles(self):
+        """Populates standard laboratory obstacles and dividers on demand (e.g. key 'O')."""
         self.interior_walls = [
             [4.5, 0.0, 4.5, 2.6],
             [4.5, 4.2, 4.5, 8.0],
@@ -58,8 +65,6 @@ class IndoorWorld:
             [7.0, 3.5, 7.0, 6.2]
         ]
         self.all_walls = self.boundary_walls + self.interior_walls
-
-        # Static obstacles
         self.obstacles = [
             CircleObstacle(2.2, 2.2, radius=0.35, label="Lab Pillar A"),
             CircleObstacle(2.2, 6.2, radius=0.35, label="Lab Pillar B"),
@@ -67,14 +72,9 @@ class IndoorWorld:
             BoxObstacle(8.2, 6.0, width=1.0, height=1.0, label="Storage Cabinet"),
             CircleObstacle(5.8, 4.8, radius=0.30, label="Hallway Column")
         ]
-
-        # Dynamic obstacle patrolling corridor
         self.dynamic_obstacles = [
             DynamicObstacle(4.5, 3.4, radius=0.25, patrol_x2=6.2, patrol_y2=3.4, speed=0.15, label="Patrolling Cart")
         ]
-
-        self.start_pose = (1.2, 1.5, 0.0)
-        self.goal_pose = (8.5, 4.8, math.radians(90.0))
 
     def load_from_yaml(self, filepath: str):
         """Loads world specifications from YAML file."""

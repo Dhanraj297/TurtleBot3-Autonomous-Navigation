@@ -110,9 +110,14 @@ class TurtleBot3SimulationNode:
         self.sub_goal_pose = None
         self.init_ros2()
 
-        # Set default goal from CLI argument or world configuration
-        target_goal = initial_goal if initial_goal is not None else self.world.goal_pose
-        self.set_goal(target_goal)
+        # Initial state: NO path and NO movement until user sets a goal!
+        if initial_goal is not None:
+            self.set_goal(initial_goal)
+        else:
+            self.navigator.state = NavState.IDLE
+            self.navigator.current_goal = None
+            self.navigator.path = []
+            self.navigator.status_message = "READY: Left-Click anywhere to set destination path"
 
     def init_ros2(self):
         """Initializes ROS 2 Humble node and standard publishers/subscribers."""
@@ -194,17 +199,25 @@ class TurtleBot3SimulationNode:
                         self.set_goal(self.navigator.current_goal)
                     print("[UI] Autonomous Navigation Triggered.")
                 elif event.key == pygame.K_r:
+                    self.navigator.cancel_navigation()
                     sx, sy, stheta = self.world.start_pose
                     self.robot.reset_pose(sx, sy, stheta)
                     self.localizer.set_pose(sx, sy, stheta)
+                    print("[UI] Reset robot to starting pose (Idle, no path).")
+                elif event.key == pygame.K_o:
+                    self.world.load_preset_lab_obstacles()
+                    self.grid, self.grid_meta = self.world.generate_occupancy_grid(0.22)
+                    self.planner.set_map(self.grid, self.grid_meta)
+                    print("[UI] Loaded preset laboratory obstacles.")
                     if self.navigator.current_goal:
                         self.set_goal(self.navigator.current_goal)
-                    print("[UI] Reset robot to starting pose.")
                 elif event.key == pygame.K_c:
                     self.world.create_default_world()
                     self.grid, self.grid_meta = self.world.generate_occupancy_grid(0.22)
                     self.planner.set_map(self.grid, self.grid_meta)
-                    print("[UI] Cleared custom obstacles.")
+                    print("[UI] Cleared all obstacles back to clean arena.")
+                    if self.navigator.current_goal:
+                        self.set_goal(self.navigator.current_goal)
                 elif event.key == pygame.K_s:
                     shot_path = os.path.join(PROJECT_ROOT, "screenshots", f"nav_screen_{int(time.time())}.png")
                     self.visualizer.capture_screenshot(shot_path)
@@ -274,8 +287,9 @@ class TurtleBot3SimulationNode:
 
         # 7. Package Telemetry for Visualizer HUD
         min_clearance = min([r for r in ranges if not math.isinf(r)] + [self.lidar.max_range])
-        goal = self.navigator.current_goal or (0.0, 0.0, 0.0)
-        dist_to_goal = math.hypot(goal[0] - self.robot.x, goal[1] - self.robot.y)
+        has_goal = self.navigator.current_goal is not None
+        goal = self.navigator.current_goal if has_goal else (0.0, 0.0, 0.0)
+        dist_to_goal = math.hypot(goal[0] - self.robot.x, goal[1] - self.robot.y) if has_goal else 0.0
 
         telemetry = {
             "mode": self.mode,
@@ -285,11 +299,12 @@ class TurtleBot3SimulationNode:
             "theta_deg": math.degrees(self.robot.theta),
             "v": self.robot.v,
             "omega": self.robot.omega,
-            "goal_x": goal[0],
-            "goal_y": goal[1],
+            "goal_x": goal[0] if has_goal else 0.0,
+            "goal_y": goal[1] if has_goal else 0.0,
             "dist_to_goal": dist_to_goal,
+            "has_goal": has_goal,
             "min_lidar_dist": min_clearance,
-            "waypoints_left": max(0, len(self.navigator.path) - self.navigator.current_waypoint_idx),
+            "waypoints_left": max(0, len(self.navigator.path) - self.navigator.current_waypoint_idx) if has_goal else 0,
             "total_waypoints": len(self.navigator.path),
             "dist_traveled": self.robot.distance_traveled,
             "status_message": self.navigator.status_message

@@ -1,5 +1,6 @@
 # Indoor Simulation World Configuration
-# Represents an indoor laboratory / office environment with walls and obstacles
+# Clean Arena Setup: Initial empty floor with boundary walls
+# Obstacles and paths are added interactively by the user
 
 world:
   name: "Robotics_Laboratory_Indoor_Arena"
@@ -7,64 +8,20 @@ world:
   height: 8.0   # meters along Y axis
   grid_resolution: 0.05  # 5 cm per occupancy grid cell (200 x 160 cells)
 
-# Outer perimeter boundaries [x1, y1, x2, y2]
+# Outer perimeter boundary walls [x1, y1, x2, y2]
 boundary_walls:
   - [0.0, 0.0, 10.0, 0.0]  # South wall
   - [10.0, 0.0, 10.0, 8.0] # East wall
   - [10.0, 8.0, 0.0, 8.0]  # North wall
   - [0.0, 8.0, 0.0, 0.0]   # West wall
 
-# Interior walls creating rooms and corridors
-interior_walls:
-  # Central partition with doorways
-  - [4.5, 0.0, 4.5, 2.5]   # Lower vertical wall
-  - [4.5, 4.0, 4.5, 8.0]   # Upper vertical wall (doorway between y=2.5 and y=4.0)
-  
-  # Horizontal divider in west zone
-  - [0.0, 4.5, 2.8, 4.5]   # West horizontal partition
-  
-  # East zone office partition
-  - [7.0, 3.5, 10.0, 3.5]  # East horizontal partition
-  - [7.0, 3.5, 7.0, 6.0]   # East vertical partition (doorway between y=6.0 and y=8.0)
+# Interior walls (empty initially for clear arena)
+interior_walls: []
 
-# Static obstacles (pillars, lab tables, boxes)
-# Format: [type, center_x, center_y, param1, param2]
-# circle: [type, x, y, radius]
-# box: [type, x, y, width, height]
-obstacles:
-  - type: "circle"
-    x: 2.2
-    y: 2.2
-    radius: 0.35
-    label: "Lab Pillar A"
+# Static obstacles (empty initially: user adds obstacles via Right-Click or 'O' key)
+obstacles: []
 
-  - type: "circle"
-    x: 2.2
-    y: 6.2
-    radius: 0.35
-    label: "Lab Pillar B"
-
-  - type: "box"
-    x: 8.2
-    y: 1.8
-    width: 1.2
-    height: 0.8
-    label: "Workstation Table 1"
-
-  - type: "box"
-    x: 8.2
-    y: 6.0
-    width: 1.0
-    height: 1.0
-    label: "Storage Cabinet"
-
-  - type: "circle"
-    x: 5.8
-    y: 4.8
-    radius: 0.30
-    label: "Hallway Column"
-
-# Default navigation waypoints [x, y, theta_degrees]
+# Pre-defined reference points
 waypoints:
   start_position: [1.2, 1.5, 0.0]
   goal_position: [8.5, 4.8, 90.0]
