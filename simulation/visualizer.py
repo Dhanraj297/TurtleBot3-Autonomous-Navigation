@@ -18,12 +18,24 @@ Features:
   * A or Space: Start Autonomous Navigation.
   * R: Reset robot to starting position.
   * C: Clear custom obstacles.
-  * S: Capture high-resolution screenshot to screenshots/ folder.
+  * P: Capture high-resolution screenshot to screenshots/ folder.
 - Professional Dark Mode HUD displaying state, velocities, and telemetry.
 """
 
 import math
 import os
+import sys
+
+if sys.platform == "win32":
+    pixi_lib_bin = os.path.join(os.path.dirname(sys.executable), "Library", "bin")
+    if os.path.exists(pixi_lib_bin):
+        os.environ["PATH"] = pixi_lib_bin + os.pathsep + os.environ.get("PATH", "")
+        if hasattr(os, "add_dll_directory"):
+            try:
+                os.add_dll_directory(pixi_lib_bin)
+            except Exception:
+                pass
+
 import pygame
 from typing import List, Tuple, Optional, Dict, Any
 
@@ -282,7 +294,7 @@ class SimulationVisualizer:
             ("R", "Reset Robot (Idle)"),
             ("T", "Toggle Teleoperation"),
             ("W/A/S/D", "Drive in Teleop"),
-            ("S", "Capture Screenshot")
+            ("P", "Capture Screenshot")
         ]
 
         for key, desc in controls:

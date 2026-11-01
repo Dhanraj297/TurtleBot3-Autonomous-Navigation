@@ -19,6 +19,17 @@ import math
 import time
 import argparse
 from typing import Tuple, List, Optional, Dict, Any
+# Ensure Windows DLL search directory for conda/pixi environments
+if sys.platform == "win32":
+    pixi_lib_bin = os.path.join(os.path.dirname(sys.executable), "Library", "bin")
+    if os.path.exists(pixi_lib_bin):
+        os.environ["PATH"] = pixi_lib_bin + os.pathsep + os.environ.get("PATH", "")
+        if hasattr(os, "add_dll_directory"):
+            try:
+                os.add_dll_directory(pixi_lib_bin)
+            except Exception:
+                pass
+
 import pygame
 
 # Add project root to Python module search path
@@ -101,6 +112,7 @@ class TurtleBot3SimulationNode:
         self.mode = "AUTONOMOUS"
         self.teleop_v = 0.0
         self.teleop_omega = 0.0
+        self.last_replan_time = 0.0
 
         # ROS 2 Communication Objects
         self.ros_node = None
@@ -189,6 +201,13 @@ class TurtleBot3SimulationNode:
                         self.grid, self.grid_meta = self.world.generate_occupancy_grid(0.22)
                         self.planner.set_map(self.grid, self.grid_meta)
 
+                        # If robot is navigating towards destination, check if path is obstructed and re-route
+                        if self.navigator.current_goal is not None and self.mode == "AUTONOMOUS":
+                            if self.navigator.is_path_obstructed((self.robot.x, self.robot.y, self.robot.theta), world=self.world):
+                                print("[UI] Dynamic obstacle placed on robot path! Re-routing to destination...")
+                                self.navigator.replan((self.robot.x, self.robot.y, self.robot.theta))
+                                self.last_replan_time = time.time()
+
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_t:
                     self.mode = "TELEOPERATION" if self.mode == "AUTONOMOUS" else "AUTONOMOUS"
@@ -210,15 +229,17 @@ class TurtleBot3SimulationNode:
                     self.planner.set_map(self.grid, self.grid_meta)
                     print("[UI] Loaded preset laboratory obstacles.")
                     if self.navigator.current_goal:
-                        self.set_goal(self.navigator.current_goal)
+                        self.navigator.replan((self.robot.x, self.robot.y, self.robot.theta))
+                        self.last_replan_time = time.time()
                 elif event.key == pygame.K_c:
                     self.world.create_default_world()
                     self.grid, self.grid_meta = self.world.generate_occupancy_grid(0.22)
                     self.planner.set_map(self.grid, self.grid_meta)
                     print("[UI] Cleared all obstacles back to clean arena.")
                     if self.navigator.current_goal:
-                        self.set_goal(self.navigator.current_goal)
-                elif event.key == pygame.K_s:
+                        self.navigator.replan((self.robot.x, self.robot.y, self.robot.theta))
+                        self.last_replan_time = time.time()
+                elif event.key == pygame.K_p:
                     shot_path = os.path.join(PROJECT_ROOT, "screenshots", f"nav_screen_{int(time.time())}.png")
                     self.visualizer.capture_screenshot(shot_path)
 
@@ -254,6 +275,18 @@ class TurtleBot3SimulationNode:
 
         # 3. Determine velocity commands based on operating mode
         if self.mode == "AUTONOMOUS":
+            # Dynamic re-routing check while moving if path is obstructed
+            now_sec = time.time()
+            if self.navigator.current_goal is not None and self.navigator.state in [NavState.NAVIGATING, NavState.AVOIDING_OBSTACLE]:
+                if (now_sec - self.last_replan_time) >= 0.8:
+                    if self.navigator.is_path_obstructed((self.robot.x, self.robot.y, self.robot.theta), world=self.world, check_safety_radius=0.12):
+                        print("[Navigator] Path obstruction detected while moving! Re-routing path to destination...")
+                        if self.world.dynamic_obstacles:
+                            self.grid, self.grid_meta = self.world.generate_occupancy_grid(0.22)
+                            self.planner.set_map(self.grid, self.grid_meta)
+                        self.navigator.replan((self.robot.x, self.robot.y, self.robot.theta))
+                        self.last_replan_time = now_sec
+
             cmd_v, cmd_omega = self.navigator.update(
                 (self.robot.x, self.robot.y, self.robot.theta),
                 ranges,

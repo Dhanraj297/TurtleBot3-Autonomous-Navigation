@@ -186,7 +186,7 @@ class AStarPlanner:
 
         return None  # No path found
 
-    def find_nearest_free_cell(self, c: int, r: int, max_radius: int = 10) -> Tuple[Optional[int], Optional[int]]:
+    def find_nearest_free_cell(self, c: int, r: int, max_radius: int = 25) -> Tuple[Optional[int], Optional[int]]:
         """Spirals outwards to find nearest non-colliding cell if query point is on obstacle boundary."""
         for rad in range(1, max_radius + 1):
             for dc in range(-rad, rad + 1):

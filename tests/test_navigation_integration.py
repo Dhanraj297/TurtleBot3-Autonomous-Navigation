@@ -113,6 +113,88 @@ class TestNavigationIntegration(unittest.TestCase):
         self.assertEqual(self.robot.omega, 0.0, "Robot angular velocity should be zero at destination")
         self.assertEqual(self.navigator.state, NavState.GOAL_REACHED)
 
+    def test_is_path_obstructed_detection(self):
+        """
+        Verifies that is_path_obstructed accurately flags obstacles placed
+        directly on the planned trajectory, and ignores obstacles far from the path.
+        """
+        self.navigator.set_goal((1.2, 1.5, 0.0), (6.0, 1.5, 0.0))
+        # Initial straight line path has no obstacles
+        self.assertFalse(self.navigator.is_path_obstructed((1.2, 1.5, 0.0), world=self.world))
+
+        # Place obstacle far away at (3.5, 6.0)
+        self.world.add_dynamic_obstacle(3.5, 6.0, radius=0.28)
+        self.assertFalse(self.navigator.is_path_obstructed((1.2, 1.5, 0.0), world=self.world))
+
+        # Place obstacle directly on path at (3.5, 1.5)
+        self.world.add_dynamic_obstacle(3.5, 1.5, radius=0.28)
+        self.assertTrue(self.navigator.is_path_obstructed((1.2, 1.5, 0.0), world=self.world))
+
+    def test_dynamic_rerouting_around_placed_obstacle(self):
+        """
+        Verifies dynamic re-routing:
+        1. Robot starts moving towards destination along planned path.
+        2. Dynamic obstacle is placed on the path while the robot is moving.
+        3. System detects obstruction and re-routes path around obstacle to destination.
+        4. Robot reaches destination safely without colliding with the placed obstacle.
+        """
+        target_goal = (4.5, 1.5, 0.0)
+        self.navigator.set_goal(
+            robot_pose=(self.robot.x, self.robot.y, self.robot.theta),
+            goal_pose=target_goal
+        )
+        self.assertEqual(self.navigator.replan_count, 0)
+
+        dt = 0.05
+        # Move robot forward for 20 steps
+        for _ in range(20):
+            obs_dicts = self.world.get_all_obstacle_dicts()
+            ranges, _ = self.lidar.scan(self.robot.x, self.robot.y, self.robot.theta, self.world.all_walls, obs_dicts)
+            v, w_cmd = self.navigator.update((self.robot.x, self.robot.y, self.robot.theta), ranges, dt=dt)
+            self.robot.update_pose(v, w_cmd, dt)
+
+        # Place dynamic obstacle directly in front of moving robot along path
+        obs_x, obs_y = 2.8, 1.5
+        obs_radius = 0.28
+        self.world.add_dynamic_obstacle(obs_x, obs_y, radius=obs_radius)
+
+        # Verify obstruction is detected
+        is_blocked = self.navigator.is_path_obstructed((self.robot.x, self.robot.y, self.robot.theta), world=self.world)
+        self.assertTrue(is_blocked, "Navigator should detect placed obstacle on path")
+
+        # Update planner map and re-route
+        grid, meta = self.world.generate_occupancy_grid(0.20)
+        self.planner.set_map(grid, meta)
+        replan_ok = self.navigator.replan((self.robot.x, self.robot.y, self.robot.theta))
+        self.assertTrue(replan_ok, "Navigator should successfully re-route path around obstacle")
+        self.assertEqual(self.navigator.replan_count, 1)
+
+        # Continue closed-loop simulation until goal is reached
+        arrived = False
+        min_obstacle_distance = float('inf')
+        max_steps = 2500
+
+        for _ in range(max_steps):
+            obs_dicts = self.world.get_all_obstacle_dicts()
+            ranges, _ = self.lidar.scan(self.robot.x, self.robot.y, self.robot.theta, self.world.all_walls, obs_dicts)
+            v, w_cmd = self.navigator.update((self.robot.x, self.robot.y, self.robot.theta), ranges, dt=dt)
+            self.robot.update_pose(v, w_cmd, dt)
+
+            dist_to_obs = math.hypot(self.robot.x - obs_x, self.robot.y - obs_y)
+            if dist_to_obs < min_obstacle_distance:
+                min_obstacle_distance = dist_to_obs
+
+            if self.navigator.state == NavState.GOAL_REACHED:
+                arrived = True
+                break
+
+        # Verification: Destination reached and no collision with placed obstacle
+        self.assertTrue(arrived, "Robot should successfully reach destination on re-routed path")
+        dist_to_goal = math.hypot(target_goal[0] - self.robot.x, target_goal[1] - self.robot.y)
+        self.assertLessEqual(dist_to_goal, 0.08)
+        self.assertGreater(min_obstacle_distance, obs_radius + self.robot.chassis_radius,
+                           "Robot must maintain safe clearance from placed obstacle")
+
 
 if __name__ == "__main__":
     unittest.main()

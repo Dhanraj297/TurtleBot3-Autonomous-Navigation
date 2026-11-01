@@ -87,13 +87,13 @@ When running `scripts/main.py`, the following controls are available directly in
 | Control | Action |
 | :--- | :--- |
 | **Left Mouse Click** | Set new 2D Navigation Goal pose (clicks anywhere on the arena floor). |
-| **Right Mouse Click** | Place a new dynamic obstacle on the fly to test reactive avoidance! |
+| **Right Mouse Click** | Place a new dynamic obstacle on the fly (automatically re-routes the bot around it!). |
 | **Space / A** | Trigger/restart autonomous navigation to current goal. |
 | **T** | Toggle between **Autonomous** and **Manual Keyboard Teleoperation** modes. |
 | **W / A / S / D** | Drive robot manually (when in Teleoperation mode). |
 | **R** | Reset robot back to starting pose `(1.2, 1.5, 0.0)`. |
 | **C** | Clear user-placed dynamic obstacles and restore default arena. |
-| **S** | Capture a high-resolution screenshot to `screenshots/`. |
+| **P** | Capture a high-resolution screenshot to `screenshots/`. |
 
 ---
 
@@ -110,6 +110,7 @@ TurtleBot3_ESE/
 │   └── world_config.yaml       # Indoor arena, walls & obstacle definitions
 ├── docs/
 │   ├── architecture.md         # Software architecture & node communication
+│   ├── cse_project_guide.md    # Complete CSE beginner-friendly project guide
 │   ├── installation.md         # Windows 11 setup & dependency documentation
 │   ├── project_report.md       # Complete academic laboratory project report
 │   ├── viva_questions.md       # 40+ exhaustive viva voce Q&A with CS bridges

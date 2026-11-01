@@ -88,6 +88,94 @@ class AutonomousNavigator:
             self.status_message = "Path planning failed: No valid collision-free path to goal!"
             return False
 
+    def replan(
+        self,
+        robot_pose: Tuple[float, float, float]
+    ) -> bool:
+        """
+        Dynamically re-routes the path to the current destination from current robot pose,
+        avoiding newly placed or detected obstacles.
+        """
+        if self.current_goal is None:
+            return False
+
+        start_pt = (robot_pose[0], robot_pose[1])
+        goal_pt = (self.current_goal[0], self.current_goal[1])
+
+        new_path = self.planner.plan(start_pt, goal_pt, smooth=True)
+
+        if new_path and len(new_path) >= 1:
+            self.path = new_path
+            self.current_waypoint_idx = 0
+            self.replan_count += 1
+            self.state = NavState.NAVIGATING
+            self.status_message = f"Path re-routed ({len(self.path)} waypoints, replan #{self.replan_count}) to destination."
+            print(f"[AutonomousNavigator] Successfully re-routed path to destination ({goal_pt[0]:.2f}, {goal_pt[1]:.2f})! (Replan #{self.replan_count})")
+            return True
+        else:
+            self.status_message = "Re-routing failed: No collision-free path to destination found!"
+            print(f"[AutonomousNavigator] Warning: Could not find collision-free path to destination!")
+            return False
+
+    def is_path_obstructed(
+        self,
+        robot_pose: Tuple[float, float, float],
+        world: Optional[Any] = None,
+        check_safety_radius: float = 0.12
+    ) -> bool:
+        """
+        Verifies whether the remaining path from current robot pose to destination
+        is obstructed by any obstacle or wall.
+        Uses physical robot chassis clearance (0.12m) to prevent false-positive replanning loops.
+        """
+        if not self.path or self.current_goal is None:
+            return False
+
+        if self.state in [NavState.IDLE, NavState.GOAL_REACHED, NavState.FAILED]:
+            return False
+
+        rx, ry, _ = robot_pose
+
+        # Construct remaining path waypoints: start from current robot pose,
+        # then advance through remaining waypoints
+        remaining_waypoints = [(rx, ry)]
+        if self.current_waypoint_idx < len(self.path):
+            remaining_waypoints.extend(self.path[self.current_waypoint_idx:])
+        else:
+            remaining_waypoints.append(self.path[-1])
+
+        # Step size for collision checking along path segments (5 cm)
+        step_size = self.planner.resolution if self.planner else 0.05
+
+        for i in range(len(remaining_waypoints) - 1):
+            p1 = remaining_waypoints[i]
+            p2 = remaining_waypoints[i + 1]
+            seg_dist = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+            steps = max(1, int(math.ceil(seg_dist / step_size)))
+
+            for s in range(steps + 1):
+                alpha = s / steps
+                px = p1[0] + alpha * (p2[0] - p1[0])
+                py = p1[1] + alpha * (p2[1] - p1[1])
+
+                # Skip checking the robot's immediate current position (within 0.25m of start)
+                # to avoid false positives when pivoting around obstacle inflation boundaries
+                if i == 0 and (alpha * seg_dist) < 0.25:
+                    continue
+
+                # 1. Check against IndoorWorld geometry with physical robot footprint
+                if world is not None:
+                    if world.is_in_collision(px, py, safety_radius=check_safety_radius):
+                        return True
+
+                # 2. Fallback check against A* occupancy grid if world is not provided
+                elif self.planner is not None and self.planner.grid is not None:
+                    col, row = self.planner.world_to_grid(px, py)
+                    if not self.planner.is_valid_cell(col, row):
+                        return True
+
+        return False
+
     def update(
         self,
         robot_pose: Tuple[float, float, float],
