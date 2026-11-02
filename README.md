@@ -97,7 +97,25 @@ pixi run python scripts/teleoperation.py
 pixi run python tests/run_all_tests.py
 ```
 
-### 5. Custom Command-Line Options
+### 5. Running in 3D Gazebo (WSL2 Integration)
+
+If your teacher or examiner specifically requires seeing the robot inside the **3D Gazebo physics simulator**, this project seamlessly bridges across ROS 2 DDS:
+
+1. **One-Command Setup:** Run our automated installer in Ubuntu 22.04 (WSL2):
+   ```bash
+   ./scripts/setup_gazebo_wsl.sh
+   ```
+2. **Launch 3D Gazebo Arena:**
+   ```bash
+   ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+   ```
+3. **Run Our Autonomous Navigator Against Gazebo:**
+   ```bash
+   python3 scripts/gazebo_navigator.py
+   ```
+> See the complete, step-by-step walkthrough and viva Q&A in **[Gazebo 3D Guide (docs/gazebo_3d_guide.md)](docs/gazebo_3d_guide.md)**.
+
+### 6. Custom Command-Line Options
 You can configure start goals and headless modes via CLI flags:
 ```powershell
 # Set specific goal coordinates (X=6.5m, Y=3.2m, Yaw=90 degrees)
@@ -257,9 +275,10 @@ Errors          : 0
 
 ---
 
-## 9. Academic Documentation
+## 10. Academic Documentation
 
 Complete academic deliverables prepared for the Laboratory Examination:
+* **[Gazebo 3D Guide (docs/gazebo_3d_guide.md)](docs/gazebo_3d_guide.md):** Step-by-step WSL2 3D Gazebo setup, DDS bridge, and physics engine viva defense.
 * **[CSE Project Guide (docs/cse_project_guide.md)](docs/cse_project_guide.md):** Complete conceptual guide explaining robotics concepts using CS analogies.
 * **[System Architecture (docs/architecture.md)](docs/architecture.md):** Architectural design patterns, layer breakdowns, and ROS 2 topic specifications.
 * **[Academic Laboratory Report (docs/project_report.md)](docs/project_report.md):** Full academic project report with mathematical derivations.
@@ -269,7 +288,7 @@ Complete academic deliverables prepared for the Laboratory Examination:
 
 ---
 
-## 10. License & Credits
+## 11. License & Credits
 
 * **Curriculum Reference:** Mecharithm Lesson 9 ("Autonomous Navigation of Turtlebot Using ROS").
 * **Robot Platform:** ROBOTIS TurtleBot3 Burger specifications.

@@ -2,8 +2,9 @@
 TurtleBot3 Keyboard Teleoperation Node
 Robotics Laboratory ESE
 
-Controls the simulated or real TurtleBot3 using standard terminal keypresses,
+Controls the simulated (Pygame / Gazebo) or real TurtleBot3 using standard terminal keypresses,
 publishing geometry_msgs/Twist messages to the /cmd_vel topic.
+Compatible with both Windows (msvcrt) and Linux / WSL (termios).
 
 Keybindings:
 ---------------------------
@@ -36,9 +37,9 @@ except ImportError:
 
 def print_teleop_banner(v: float, omega: float, max_v: float = 0.22, max_w: float = 2.84):
     os.system('cls' if os.name == 'nt' else 'clear')
-    print("=" * 55)
+    print("=" * 58)
     print("      TURTLEBOT3 KEYBOARD TELEOPERATION (ROS 2)      ")
-    print("=" * 55)
+    print("=" * 58)
     print("  Moving around:")
     print("        w")
     print("   a    s    d")
@@ -50,7 +51,41 @@ def print_teleop_banner(v: float, omega: float, max_v: float = 0.22, max_w: floa
     print(f"  CURRENT SPEED:")
     print(f"    Linear Velocity (v)  : {v:+.2f} m/s  (max: +/-{max_v:.2f})")
     print(f"    Angular Velocity (w) : {omega:+.2f} rad/s (max: +/-{max_w:.2f})")
-    print("=" * 55)
+    print("=" * 58)
+
+
+class NonBlockingKeyReader:
+    """Cross-platform non-blocking key reader for Windows and POSIX (Linux / WSL)."""
+
+    def __init__(self):
+        self.is_windows = (sys.platform == "win32")
+        if not self.is_windows:
+            import termios
+            import tty
+            self.termios = termios
+            self.tty = tty
+            self.old_settings = termios.tcgetattr(sys.stdin)
+            tty.setcbreak(sys.stdin.fileno())
+
+    def read_char(self):
+        if self.is_windows:
+            import msvcrt
+            if msvcrt.kbhit():
+                try:
+                    return msvcrt.getch().decode("utf-8").lower()
+                except UnicodeDecodeError:
+                    return None
+            return None
+        else:
+            import select
+            rlist, _, _ = select.select([sys.stdin], [], [], 0.02)
+            if rlist:
+                return sys.stdin.read(1).lower()
+            return None
+
+    def restore(self):
+        if not self.is_windows and hasattr(self, 'old_settings'):
+            self.termios.tcsetattr(sys.stdin, self.termios.TCSADRAIN, self.old_settings)
 
 
 def main():
@@ -62,6 +97,7 @@ def main():
             rclpy.init()
         node = rclpy.create_node("turtlebot3_teleop_keyboard")
         pub = node.create_publisher(Twist, "/cmd_vel", 10)
+        print("[ROS 2] Initialized teleop publisher on /cmd_vel")
 
     target_v = 0.0
     target_omega = 0.0
@@ -71,19 +107,12 @@ def main():
     step_omega = 0.15
 
     print_teleop_banner(target_v, target_omega)
-
-    # Windows non-blocking single-key reader
-    import msvcrt
+    key_reader = NonBlockingKeyReader()
 
     try:
         while True:
-            if msvcrt.kbhit():
-                key = msvcrt.getch()
-                try:
-                    char = key.decode("utf-8").lower()
-                except UnicodeDecodeError:
-                    continue
-
+            char = key_reader.read_char()
+            if char:
                 if char == 'w':
                     target_v = min(max_v, target_v + step_v)
                 elif char == 'x':
@@ -113,6 +142,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        key_reader.restore()
         if pub and node:
             twist = Twist()
             pub.publish(twist)  # Stop robot on exit
